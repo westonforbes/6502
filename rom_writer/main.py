@@ -57,6 +57,42 @@ def lda_example(rom: bytearray, address: int, value: int)-> None:
     rom[address + 3] = 0x00   # Low byte of address 0x6000.
     rom[address + 4] = 0x60   # High byte of address 0x6000.
 
+def pad_code_and_add_reset_vector(code: bytearray)-> None:
+
+    padded_code = code + bytearray([0xEA] * (32768 - len(code)))
+    padded_code[0x7FFC] = 0x00
+    padded_code[0x7FFD] = 0x80
+    return padded_code
+
+def via_example()-> bytearray:
+
+    # 0x6000 - VIA I/O Register B.
+    # 0x6001 - VIA I/O Register A.
+    # 0x6002 - VIA Data Direction Register B (mask with 0xFF to set bits as output, 0x00 for input).
+    # 0x6003 - VIA Data Direction Register A (mask with 0xFF to set bits as output, 0x00 for input).
+    # 0x8000 - Start of ROM program.
+
+    code = bytearray([
+
+        # Set the data direction for port B to output.
+        0xA9, 0xFF,       # LDA 0xFF, Load processor register A with immediate value 0xFF.
+        0x8D, 0x02, 0x60, # STA 0x6002, Store value from processor register A into memory address 0x6002.
+        
+        # Write a value to port B to turn on alternating bits.
+        0xA9, 0x55,       # LDA 0x55, Load processor register A with immediate value 0x55. This value will turn on alternating bits on the B port.
+        0x8D, 0x00, 0x60, # STA 0x6000, Store value from processor register A into memory address 0x6000.
+
+        # Write a value to port B to turn on alternating bits (inverse).
+        0xA9, 0xAA,       # LDA 0xAA, Load processor register A with immediate value 0xAA.
+        0x8D, 0x00, 0x60, # STA 0x6000, Store value from processor register A into memory address 0x6000.
+
+        # Jump back to start to create a loop.
+        0x4C, 0x05, 0x80  # JMP 0x8005, Jump to address 0x8005 (start of the program, no need to set data direction again).
+    ])
+
+    return pad_code_and_add_reset_vector(code)
+
+
 def save_rom_to_file(rom: bytearray, filename: str)-> None:
     """
     #### Description:
@@ -94,11 +130,13 @@ if __name__ == "__main__":
     print("creating ROM image...", end='')
 
     # Initialize a blank ROM image.
-    rom = initialize_blank_rom()
+    #r om = initialize_blank_rom()
 
     # Load an example LDA immediate instruction at the start of the ROM.
     # We're loading the value 0x42 into the accumulator.
-    lda_example(rom, 0x0000, 0x42) 
+    # lda_example(rom, 0x0000, 0x42) 
+
+    rom = via_example()
 
     # Save the ROM image to a binary file.
     save_rom_to_file(rom, 'rom_writer/rom.bin')

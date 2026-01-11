@@ -76,3 +76,6 @@ venv.bak/
 # OS specific
 .DS_Store
 Thumbs.db
+rom_writer/rom.bin
+rom_writer/rom.bin.tags
+rom_writer/rom.bin
