@@ -81,6 +81,7 @@ def via_example()-> bytearray:
         # Write a value to port B to turn on alternating bits.
         0xA9, 0x55,       # LDA 0x55, Load processor register A with immediate value 0x55. This value will turn on alternating bits on the B port.
         0x8D, 0x00, 0x60, # STA 0x6000, Store value from processor register A into memory address 0x6000.
+        0xEA, 0xEA, 0xEA, # NOP so that each version of the output state is on for 9 cycles.
 
         # Write a value to port B to turn on alternating bits (inverse).
         0xA9, 0xAA,       # LDA 0xAA, Load processor register A with immediate value 0xAA.

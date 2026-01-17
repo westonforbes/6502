@@ -38,6 +38,11 @@
     sudo cp bash_completion.d/minipro /etc/bash_completion.d/
     ```
 
+### Compile Assembly
+```bash
+./vasm6502_oldstyle -Fbin -dotdir rom_assembly.s
+```
+
 ### Read Chip
 ```shell
 minipro -p "AT28C256" -r dump.bin

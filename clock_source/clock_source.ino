@@ -41,10 +41,9 @@ void loop() {
   if (Serial.available()) {
     char inChar = (char)Serial.read();
     if (inChar == '\n' || inChar == '\r') {
-      if (inputBuffer.length() > 0) {
-        processCommand(inputBuffer);
-        inputBuffer = "";
-      }
+      // Process command even if buffer is empty (Enter key pressed)
+      processCommand(inputBuffer);
+      inputBuffer = "";
     } else {
       inputBuffer += inChar;
     }
@@ -159,6 +158,11 @@ void assertReset() {
   
   delay(RESET_DURATION - 120);
   pinMode(RESET_PIN, INPUT);
+
+   for (int i = 0; i < 10; i++) {
+    digitalWrite(CLOCK_PIN, HIGH); delay(15);
+    digitalWrite(CLOCK_PIN, LOW);  delay(15);
+  }
   if (wasRunning) startClock();
 }
 
