@@ -10,117 +10,79 @@ const char ADDRESS_PIN[] = {22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 
 // Define the data pins, LSB 53 - MSB 39.
 const char DATA_PIN[] = {39, 41, 43, 45, 47, 49, 51, 53};
 
-// Define the data2 pins, LSB 21 - MSB 14.
-const char DATA2_PIN[] = {14, 15, 16, 17, 18, 19, 20, 21};
+// Define the data2 pins, LSB 37 - MSB 23.
+const char DATA2_PIN[] = {23, 25, 27, 29, 31, 33, 35, 37};
+
+// Define the data3 pins, LSB 21 - MSB 14.
+const char DATA3_PIN[] = {14, 15, 16, 17, 18, 19, 20, 21};
 
 unsigned long count = 0; // 0 to 18,446,744,073,709,551,615
 
 void setup() {
-
-  // Configure the address bus pins as inputs.
   for (int n = 0; n < 16; n += 1) pinMode(ADDRESS_PIN[n], INPUT);
-
-  // Configure the data bus pins as inputs.
   for (int n = 0; n < 8; n += 1) pinMode(DATA_PIN[n], INPUT);
-
-  // Configure the data2 bus pins as inputs.
   for (int n = 0; n < 8; n += 1) pinMode(DATA2_PIN[n], INPUT);
-
-  // Configure the clock pin as a input.
   pinMode(CLOCK_PIN, INPUT);
-
-  // Configure the read/write data bus pin as a input.
   pinMode(READ_WRITE_PIN, INPUT);
 
-  // Set a rising edge interrupt for the clock pin.
   attachInterrupt(digitalPinToInterrupt(CLOCK_PIN), clock_rising_edge, RISING);
   
-  // Estabish the serial interface.
   Serial.begin(57600);
-
   Serial.println("bus monitor started.");
 }
 
-
 void clock_rising_edge() {
-
-  // Add to the count.
   count++;
-  
-  // Check the data bus read mode. If the RWB_PIN is high, that means the processor wants to read data from the data bus.
   bool read_mode = digitalRead(READ_WRITE_PIN);
-
-  // Determine if the processor is reading or writing to the busses.
   char rw_mode = read_mode ? 'R': 'W';
   
-  // Create a string to hold a string binary representation of the bus.
   String address_string = "";
-
-  // Var to hold the bytecode of the address (unsigned int is 16 bits).
   unsigned int address = 0;
-
-  // For each address bus line...
   for (int n = 0; n < 16; n += 1) {
-
-    // Read if the line is on or off.
     int bit = digitalRead(ADDRESS_PIN[n]) ? 1 : 0;
-
-    // Add the 0 or 1 to the string representation.
     address_string += String(bit);
-
-    // Bit shift the address values over one and add in the new value.
     address = (address << 1) + bit;
   }
 
-  // Create a string to hold a string binary representation of the bus.
   String data_string = "";
-
-  // Var to hold the bytecode of the address (byte is 8 bits).
-  byte data;
-
-  // For each data bus line...
+  byte data = 0;
   for (int n = 0; n < 8; n += 1) {
-
-    // Read if the line is on or off.
     int bit = digitalRead(DATA_PIN[n]) ? 1 : 0;
-
-    // Add the 0 or 1 to the string representation.
     data_string += String(bit);
-
-    // Bit shift the address values over one and add in the new value.
     data = (data << 1) + bit;
   }
 
-  // Create a string to hold a string binary representation of the bus.
   String data2_string = "";
-
-  // Var to hold the bytecode of the address (byte is 8 bits).
-  byte data2;
-
-  // For each data2 bus line...
+  byte data2 = 0;
   for (int n = 0; n < 8; n += 1) {
-
-    // Read if the line is on or off.
     int bit = digitalRead(DATA2_PIN[n]) ? 1 : 0;
-
-    // Add the 0 or 1 to the string representation.
     data2_string += String(bit);
-
-    // Bit shift the address values over one and add in the new value.
     data2 = (data2 << 1) + bit;
   }
 
-  
+  String data3_string = "";
+  byte data3 = 0;
+  for (int n = 0; n < 8; n += 1) {
+    int bit = digitalRead(DATA3_PIN[n]) ? 1 : 0;
+    data3_string += String(bit);
+    data3 = (data3 << 1) + bit;
+  }
 
-  // Create a string to hold the op code, then lookup the op code.
-  String op_code = hexToOpcode(data);
-  
-  // Create a var to hold the string we're going to print.
-  char output[128];
-  //sprintf(output, "%c: address bus: %s : %04x data bus: %s : %02x : op code: %s", rw_mode, address_string.c_str(), address, data_string.c_str(), data, op_code.c_str());
-  sprintf(output, "%010lu  %c      address bus: %04x      data bus: %02x      data2 bus: %02x", count, rw_mode, address, data, data2);
+  // --- Color Logic ---
+  String color_code = "";
+  String reset_code = "\033[0m";
 
-  // Print the output.
+  if (data == 0xA0) {
+    color_code = "\033[31m"; // Red for LDY breadcrumb
+  } else if (address == 0x8000) {
+    color_code = "\033[32m"; // Green for Reset target
+  }
+
+  char output[160]; // Increased buffer size to accommodate escape codes
+  sprintf(output, "%s%010lu  [%c]    a, d1, d2, d3: [%s][%s][%s][%s] - [%04x][%02x][%02x][%02x]%s", 
+          color_code.c_str(), count, rw_mode, address_string.c_str(), data_string.c_str(), 
+          data2_string.c_str(), data3_string.c_str(), address, data, data2, data3, reset_code.c_str());
+
   Serial.println(output);
 }
 

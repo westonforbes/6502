@@ -88,15 +88,6 @@ reset:
   lda #RS         ; Clear E bits
   sta PORTA
 
-  lda #","
-  sta PORTB
-  lda #RS         ; Set RS; Clear RW/E bits
-  sta PORTA
-  lda #(RS | E)   ; Set E bit to send instruction
-  sta PORTA
-  lda #RS         ; Clear E bits
-  sta PORTA
-
   lda #" "
   sta PORTB
   lda #RS         ; Set RS; Clear RW/E bits
@@ -160,9 +151,12 @@ reset:
   lda #RS         ; Clear E bits
   sta PORTA
 
-loop:
-  jmp loop
+footer:
 
-  .org $fffc
-  .word reset
-  .word $0000
+  ; This calculates the distance from the current address to $FFFC
+  ; and fills it with $EA (NOP instruction)
+  .fill $FFFC - *, $EA
+
+  .org $FFFC          ; Set origin to reset vector location.
+  .word reset         ; Set reset vector to reset of program at 0x8000.
+  .word $0000         ; Fill the remaining space after reset vector with 0x0000.

@@ -40,17 +40,30 @@ reset:
     jsr lcd_instruction
 
     ; Write "HELLO" to the display.
-    lda #'H'            ; Load character 'H'.
+    lda #'D'            ; Load character 'H'.
     jsr print_char
-    lda #'E'            ; Load character 'E'.
+    lda #'A'            ; Load character 'E'.
     jsr print_char
-    lda #'L'            ; Load character 'L'.
+    lda #'R'            ; Load character 'L'.
     jsr print_char
-    lda #'L'            ; Load character 'L'.
+    lda #'R'            ; Load character 'L'.
     jsr print_char
-    lda #'L'            ; Load character 'L'.
+    lda #'Y'            ; Load character 'L'.
     jsr print_char
-    lda #'O'            ; Load character 'O'.
+    lda #'L'            ; Load character 'O'.
+    jsr print_char
+
+    lda #' '            ; Load character 'H'.
+    jsr print_char
+    lda #'S'            ; Load character 'E'.
+    jsr print_char
+    lda #'U'            ; Load character 'L'.
+    jsr print_char
+    lda #'C'            ; Load character 'L'.
+    jsr print_char
+    lda #'K'            ; Load character 'L'.
+    jsr print_char
+    lda #'S'            ; Load character 'O'.
     jsr print_char
     
     ; Clear the X register for use as an index.

@@ -1,5 +1,5 @@
 // define the code version.
-#define CODE_VERSION "1.1.5"
+#define CODE_VERSION "1.1.6"
 
 // define the clock pin (d9 on nano).
 #define CLOCK_PIN 9
@@ -19,7 +19,7 @@
 
 // define global state variables.
 volatile bool clockRunning = false;
-volatile uint32_t currentFreq = 1000;
+volatile uint32_t currentFreq = 10000; // Updated default to 1MHz
 String inputBuffer = "";
 
 // initialize hardware and serial communication.
@@ -32,8 +32,16 @@ void setup() {
   inputBuffer.reserve(50);
   Serial.println(F("clock source started."));
   
-  // initialize timer with default frequency.
+  // 1. Set frequency to 1MHz (currentFreq is initialized to 1000000)
   setFrequency(currentFreq);
+
+  // 2. Perform system reset on start
+  Serial.println(F("performing startup reset..."));
+  assertReset();
+
+  // 3. Automatically start the clock at 1MHz
+  startClock();
+  Serial.print(F("clock auto-started at: ")); Serial.print(currentFreq); Serial.println(F(" hz"));
 }
 
 // handle main loop and serial input.
@@ -41,7 +49,6 @@ void loop() {
   if (Serial.available()) {
     char inChar = (char)Serial.read();
     if (inChar == '\n' || inChar == '\r') {
-      // Process command even if buffer is empty (Enter key pressed)
       processCommand(inputBuffer);
       inputBuffer = "";
     } else {
@@ -53,9 +60,8 @@ void loop() {
 // parse and execute incoming serial commands.
 void processCommand(String cmd) {
   cmd.trim();
-  cmd.toLowerCase(); // ensure input is treated as lowercase.
+  cmd.toLowerCase();
 
-  // handle frequency command.
   if (cmd.startsWith("freq ")) {
     uint32_t freq = cmd.substring(5).toInt();
     if (freq >= MIN_FREQ && freq <= MAX_FREQ) {
@@ -65,7 +71,6 @@ void processCommand(String cmd) {
       Serial.println(F("error: frequency out of range."));
     }
   } 
-  // handle pulse command with duration and count.
   else if (cmd.startsWith("pulse")) {
     int firstSpace = cmd.indexOf(' ', 6);
     uint32_t ms = (cmd.length() > 5) ? cmd.substring(5).toInt() : 0;
@@ -77,7 +82,6 @@ void processCommand(String cmd) {
     }
     Serial.println(F("pulse(s) complete."));
   }
-  // handle start, stop, reset, status, and help.
   else if (cmd == "start")  { startClock(); Serial.println(F("clock: on")); }
   else if (cmd == "stop")   { stopClock();  Serial.println(F("clock: off")); }
   else if (cmd == "reset")  { assertReset(); Serial.println(F("system reset.")); }
@@ -88,13 +92,11 @@ void processCommand(String cmd) {
   }
 }
 
-// configure timer1 for specific frequency and pwm.
 void setFrequency(uint32_t freq) {
   currentFreq = freq;
   uint16_t prescaler;
   uint8_t prescalerBits;
 
-  // determine best prescaler for the frequency.
   if (freq >= 123)      { prescaler = 1;    prescalerBits = _BV(CS10); }
   else if (freq >= 16)  { prescaler = 8;    prescalerBits = _BV(CS11); }
   else if (freq >= 2)   { prescaler = 64;   prescalerBits = _BV(CS11) | _BV(CS10); }
@@ -104,10 +106,10 @@ void setFrequency(uint32_t freq) {
   if (top > 65535) top = 65535;
 
   noInterrupts();
-  TCCR1B = 0; // stop timer during config.
+  TCCR1B = 0; 
   TCNT1 = 0;
   ICR1 = top;
-  OCR1A = top / 2; // 50% duty cycle.
+  OCR1A = top / 2; 
   
   TCCR1A = _BV(COM1A1) | _BV(WGM11);
   if (clockRunning) {
@@ -116,13 +118,11 @@ void setFrequency(uint32_t freq) {
   interrupts();
 }
 
-// engage the pwm clock output.
 void startClock() {
   clockRunning = true;
   setFrequency(currentFreq);
 }
 
-// disable the pwm clock output.
 void stopClock() {
   clockRunning = false;
   TCCR1B = 0;
@@ -130,7 +130,6 @@ void stopClock() {
   digitalWrite(CLOCK_PIN, LOW);
 }
 
-// manually toggle a single pulse.
 void stepPulse(uint32_t ms) {
   bool wasRunning = clockRunning;
   if (wasRunning) stopClock();
@@ -142,7 +141,6 @@ void stepPulse(uint32_t ms) {
   if (wasRunning) startClock();
 }
 
-// perform hardware reset sequence.
 void assertReset() {
   bool wasRunning = clockRunning;
   if (wasRunning) stopClock();
@@ -150,7 +148,6 @@ void assertReset() {
   pinMode(RESET_PIN, OUTPUT);
   digitalWrite(RESET_PIN, LOW);
   
-  // send 4 sync pulses during reset.
   for (int i = 0; i < 4; i++) {
     digitalWrite(CLOCK_PIN, HIGH); delay(15);
     digitalWrite(CLOCK_PIN, LOW);  delay(15);
@@ -166,22 +163,19 @@ void assertReset() {
   if (wasRunning) startClock();
 }
 
-// display current settings to serial.
 void printStatus() {
   Serial.print(F("\nversion: ")); Serial.println(CODE_VERSION);
   Serial.print(F("frequency: ")); Serial.print(currentFreq); Serial.println(F(" hz"));
   Serial.print(F("state: ")); Serial.println(clockRunning ? F("running") : F("stopped"));
 }
 
-// display command menu.
 void printHelp() {
   Serial.println(F("clock source help menu"));
   Serial.println(F("    freq <hz> - set the frequency of the clock."));
   Serial.println(F("        start - start the clock."));
   Serial.println(F("         stop - stop the clock."));
-  Serial.println(F("        reset - reset the 6502."));
+  Serial.println(F("        reset - reset the system."));
   Serial.println(F("pulse <x> <y> - pulse the clock for x milliseconds y times."));
   Serial.println(F("       status - display the status of the clock source."));
   Serial.println(F("         help - show this menu."));
-  
 }
