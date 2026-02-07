@@ -1,3 +1,14 @@
+### ROM Memory Map
+- 0x0100 - 0x01FF: Stack.
+- 0x6000 - 0x6003: LCD interface.
+- 0x6004 - 0x7FFF: Unused, VIA is selected in this range.
+- 0x8000 - 0xFFFB: Program memory.
+
+### Prefix Notation
+- $ = Hexadecimal prefix.
+- % = Binary prefix.
+- No prefix = Decimal number.
+
 # ROM Writer
 ## Programmer Useage
 
@@ -40,17 +51,17 @@
 
 ### Compile Assembly
 ```bash
-./vasm6502_oldstyle -Fbin -dotdir rom_assembly.s
+./vasm6502_oldstyle -Fbin -dotdir assembly_programs/main.s -o assembly_programs/rom.bin
 ```
 
 ### Read Chip
 ```shell
-minipro -p "AT28C256" -r dump.bin
+minipro -p "AT28C256" -r assembly_programs/dump.bin
 ```
 
 ### Write Chip
 ```shell
-minipro -p "AT28C256" -w rom.bin
+minipro -p "AT28C256" -w assembly_programs/rom.bin
 ```
 
 ### Erase a chip.

@@ -6,18 +6,22 @@ CLEAR_DISPLAY   = %00000001
 LINE_1 = %00000000
 LINE_2 = %01000000
 
+; Set data direction of ports.
 initialize_via:
-    ; Set data direction of ports.
-    ldy #$04                 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
-    lda #%11111111           ; Set all pins on port B to output.
+    
+    ; Set all pins on port B to output.
+    lda #%11111111
     sta DDRB
-    lda #%11100000           ; Set top 3 pins on port A to output.
-    sta DDRA
-    ldy #$05                 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
-    rts                      ; Return from subroutine.
 
+    ; Set top 3 pins on port A to output.
+    lda #%11100000
+    sta DDRA
+
+    ; Return to caller.
+    rts
+
+; Initialize the LCD display.
 initialize_lcd:
-    ; Initialize the LCD display.
 
     ; Function Set - See pages 24, 25 & 27 of Hitachi HD44780 datasheet.
     ; Set 8 bit mode.
@@ -38,9 +42,12 @@ initialize_lcd:
     ; Do not shift display.
     lda #%00000110
     jsr lcd_instruction
-    rts                      ; Return from subroutine.
+
+    ; Return to caller.
+    rts
 
 clear_lcd:
+
     ; Clear Display - See page 24 & 26 of Hitachi HD44780 datasheet.
     lda #CLEAR_DISPLAY
     jsr lcd_instruction
@@ -53,6 +60,9 @@ clear_lcd:
     lda #1
     sta CURRENT_DISPLAY_LINE
 
+    ; Return to caller.
+    rts
+
 
 lcd_wait:
     ; This subroutine will run directly into the lcd_busy subroutine.
@@ -61,69 +71,133 @@ lcd_wait:
     ; We loop until the busy flag clears, then restore port B to output mode
     ; and pull the accumulator value from the stack before returning.
 
-    pha            ; Push accumulator to stack to preserve its value.
-    lda #%00000000 ; Wipe the A register.
-    sta DDRB       ; Set port B to input mode.
+    ; Push whatever is in the A register to the stack to preserve it for later.
+    pha
+
+    ; Wipe the A register and set port B to input mode.
+    lda #%00000000
+    sta DDRB
+
+    ; No RTS here, we fall through to the next label.
 
 lcd_busy:
     ; Loop until the busy flag clears.
 
-    lda #RW        ; Set RW high for read.
-    sta PORTA      ; Write to control port.
-    lda #(RW | E)  ; Set E high to latch data.
-    sta PORTA      ; Write to control port.
-    lda PORTB      ; Read data from port B.
-    and #%10000000 ; Mask all bits except the busy flag (bit 7).
-    bne lcd_busy   ; If busy flag is set, continue waiting.
+    ; Set the VIA to read mode by setting RW high on the control port.
+    lda #RW
+    sta PORTA
 
-    lda #RW        ; Set RW high for read.
-    sta PORTA      ; Write to control port.
-    lda #%11111111 ; Port B is output
-    sta DDRB       ; Set port B to output mode.
-    pla            ; Pull accumulator from stack to restore its value.
-    rts            ; Return from subroutine.
+    ; Set E high to latch data.
+    lda #(RW | E)
+    sta PORTA
 
+    ; Read in port B to the A register and AND with mask to isolate busy flag.
+    lda PORTB
+    and #%10000000
+
+    ; If the busy flag is set, jump back to lcd_busy to keep waiting.
+    bne lcd_busy
+
+    ; If we get here, the busy flag is clear.
+
+    ; Set E low and read/write to high (read mode) to finish the read cycle.
+    lda #RW
+    sta PORTA
+
+    ; Set port B back to output mode.
+    lda #%11111111
+    sta DDRB
+
+    ; Pull the preserved A register value from the stack.
+    pla
+
+    ; Return to caller.
+    rts
+
+; Send an instruction to the LCD.
 lcd_instruction:
-    ; Send an instruction to the LCD.
     
-    jsr lcd_wait   ; Wait until LCD is not busy.
-    sta PORTB      ; Send instruction to data port.
-    lda #0         ; Clear RS/RW/E bits.
-    sta PORTA      ; Write to control port.
-    lda #E         ; Set E bit to send instruction.
-    sta PORTA      ; Write to control port.
-    lda #0         ; Clear RS/RW/E bits.
-    sta PORTA      ; Write to control port.
-    rts            ; Return from subroutine.
+    ; Wait until LCD is not busy.
+    jsr lcd_wait
 
+    ; Send instruction to data port.
+    sta PORTB
+
+    ; Clear RS/RW/E bits.
+    lda #0
+    sta PORTA
+
+    ; Set E bit to send instruction.
+    lda #E
+    sta PORTA
+
+    ; Clear RS/RW/E bits.
+    lda #0
+    sta PORTA
+
+    ; Return to caller.
+    rts
+
+; Send a character to the LCD.
 print_character:
-    ; Send a character to the LCD.
 
-    jsr lcd_wait   ; Wait until LCD is not busy.
-    sta PORTB      ; Send character to data port.
-    lda #RS        ; Set RS. Clear RW/E bits.
-    sta PORTA      ; Write to control port.
-    lda #(RS | E)  ; Set E bit to send instruction.
-    sta PORTA      ; Write to control port.
-    lda #RS        ; Clear E bits.
-    sta PORTA      ; Write to control port.
-    rts            ; Return from subroutine.
+    ; Wait until LCD is not busy.
+    jsr lcd_wait
 
+    ; Send character to data port.
+    sta PORTB
+
+    ; Set RS. Clear RW/E bits.
+    lda #RS
+    sta PORTA
+
+    ; Set E bit to send instruction.
+    lda #(RS | E)
+    sta PORTA
+
+    ; Clear E bits.
+    lda #RS
+    sta PORTA
+
+    ; Return to caller.
+    rts
+
+; Print the message string to the LCD.
 print:
-    ; Print the message string to the LCD.
 
-    lda message,x       ; Load character from message string. (Take the byte at address "message" plus the value in the x register.)
-    beq loop            ; If null terminator, jump to loop.
-    jsr print_character ; Print the character.
+    ; Load character from message string. (Take the byte at address "message" plus the value in the x register.)
+    lda message,x
 
-    cpx #16             ; x = 16?
-    beq goto_line_2     ; If true, go to this label, else continue to next line.
-    inx                 ; Increment index.
-    jmp print           ; Repeat.
+    ; If null terminator, jump to loop.
+    beq loop
+
+    ; Print the character.
+    jsr print_character
+
+    ; x = 16?
+    cpx #15
+
+    ; If true, go to this label, else continue to next line.
+    beq goto_line_2
+
+    ; Increment index.
+    inx
+
+    ; Repeat.
+    jmp print
 
 goto_line_2:
-    lda #(SET_DRAM_ADDRESS | LINE_2 | 0)    ; Set DDRAM address to start of line 2.
-    jsr lcd_instruction                     ; Send instruction to LCD.
-    lda #2                                  ; Update current line pointer to 2.
+
+    ; Increment index.
+    inx
+
+    ; Set DDRAM address to start of line 2.
+    lda #(SET_DRAM_ADDRESS | LINE_2 | 0)
+    jsr lcd_instruction
+
+    ; Update current line pointer to 2.
+    lda #2
     sta CURRENT_DISPLAY_LINE
+
+    ; Continue printing.
     jmp print
