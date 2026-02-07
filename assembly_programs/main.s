@@ -10,7 +10,8 @@ reset:
 
     ; Includes.
     include "variables.s"
-    include "via_registers.s"
+    include "via.s"
+    include "keypad.s"
     include "lcd.s"
 
 ; Start of actual initialization code.
@@ -26,14 +27,18 @@ initialize:
     ; Clear x register.
     ldx #0
 
-    ; The subroutines below are in lcd.s.
+    ; Call initialization routines for VIA, keypad, and LCD, and print message to LCD.
     jsr initialize_via
+    ;jsr initialize_keypad
     jsr initialize_lcd
     jsr clear_lcd
     jsr print
 
 ; Infinite loop to end program.
 loop:
+  ldy #$01 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
+  ldy #$02 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
+  jsr check_if_key_available
   jmp loop
 
 ; Handle trailing data and reset vector.

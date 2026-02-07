@@ -6,20 +6,6 @@ CLEAR_DISPLAY   = %00000001
 LINE_1 = %00000000
 LINE_2 = %01000000
 
-; Set data direction of ports.
-initialize_via:
-    
-    ; Set all pins on port B to output.
-    lda #%11111111
-    sta DDRB
-
-    ; Set top 3 pins on port A to output.
-    lda #%11100000
-    sta DDRA
-
-    ; Return to caller.
-    rts
-
 ; Initialize the LCD display.
 initialize_lcd:
 
@@ -147,16 +133,22 @@ print_character:
     ; Send character to data port.
     sta PORTB
 
-    ; Set RS. Clear RW/E bits.
-    lda #RS
+    ; Set RS while preserving lower 5 bits on PORTA.
+    lda PORTA
+    and #%00011111
+    ora #RS
     sta PORTA
 
-    ; Set E bit to send instruction.
-    lda #(RS | E)
+    ; Set E bit to send instruction (preserve lower 5 bits).
+    lda PORTA
+    and #%00011111
+    ora #(RS | E)
     sta PORTA
 
-    ; Clear E bits.
-    lda #RS
+    ; Clear E bit (keep RS, preserve lower 5 bits).
+    lda PORTA
+    and #%00011111
+    ora #RS
     sta PORTA
 
     ; Return to caller.
