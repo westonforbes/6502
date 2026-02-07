@@ -27,17 +27,16 @@ initialize:
     ; Clear x register.
     ldx #0
 
-    ; Call initialization routines for VIA, keypad, and LCD, and print message to LCD.
+    ; Clear the y register.
+    ldy #0
+
+    ; Call initialization routines for VIA, and LCD.
     jsr initialize_via
-    ;jsr initialize_keypad
     jsr initialize_lcd
     jsr clear_lcd
-    jsr print
 
 ; Infinite loop to end program.
 loop:
-  ldy #$01 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
-  ldy #$02 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
   jsr check_if_key_available
   jmp loop
 

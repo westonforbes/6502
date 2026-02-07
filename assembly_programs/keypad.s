@@ -3,8 +3,6 @@ KEY_AVAILABLE_MASK = %00010000 ; Bit 4 of port A indicates if a key is available
 check_if_key_available:
     ; Check if a key is available by reading the appropriate bit from the VIA's port A.
     ; If a key is available, the bit will be 0; if no key is available, the bit will be 1.
-    ldy #$03 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
-    ldy #$04 ; Using the Y register for breadcrumb debugging, ldy immediate is 0xa0.
     lda PORTA
     and #KEY_AVAILABLE_MASK
     bne key_available
@@ -20,10 +18,9 @@ key_available:
 
 key_map: .asciiz "123A456B789C*0#D"
 
-
 key_map_done:
-    pha
-    jsr clear_lcd
-    pla
-    jsr print_character ; Print the key value to the LCD.
+    sta CHAR_VAL                ; Store the last key pressed in memory.
+    ;jsr clear_lcd
+    jsr print_character                 ; Print the key value to the LCD.
     rts
+
