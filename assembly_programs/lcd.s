@@ -20,8 +20,8 @@ initialize_lcd:
     jsr lcd_instruction
 
     ; Entry Mode Set
-    ; Increment address AND shift display left on write
-    lda #%00000111
+    ; Increment address, no display shift
+    lda #%00000110
     jsr lcd_instruction
 
     ; --- Set Initial Position for Calculator Mode ---
