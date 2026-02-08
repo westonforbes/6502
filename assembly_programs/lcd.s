@@ -10,32 +10,32 @@ LINE_1 = %01000000
 ; Initialize the LCD display.
 initialize_lcd:
 
-    ; Function Set - 8-bit, 2-line, 5x8 font
+    ; Function Set - See page 24 & 27 of Hitachi HD44780 datasheet.
+    ; BIT 0 - Don't care.
+    ; BIT 1 - Don't care.
+    ; BIT 2 - F - Set to 1 for 5x10 dot character font, 0 for 5x8 dot character font.
+    ; BIT 3 - N - Set to 1 for 2-line display, 0 for 1-line display.
+    ; BIT 4 - DL - Set to 1 for 8-bit interface, 0 for 4-bit interface.
+    ; BIT 5 - Function Set Flag - Must be 1 for this instruction.
     lda #%00111000
     jsr lcd_instruction
 
-    ; Display ON/OFF Control
-    ; Display on, cursor off, blinking off
+    ; Display ON/OFF Control - See page 24 & 26 of Hitachi HD44780 datasheet.
+    ; BIT 0 - B - Blink cursor (1) or steady (0).
+    ; BIT 1 - C - Display cursor (1) or hide cursor (0).
+    ; BIT 2 - D - Display on (1) or off (0)
+    ; BIT 3 - Display On/Off Control Flag - Must be 1 for this instruction.
     lda #%00001100
     jsr lcd_instruction
 
-    ; Entry Mode Set
-    ; Increment address, no display shift
-    lda #%00000110
+    ; Entry Mode Set - See page 24 & 26 of Hitachi HD44780 datasheet.
+    ; BIT 0 - S - Shift display when writing (1 = shift, 0 = no shift)
+    ; BIT 1 - I/D - Increment (1) or decrement (0) cursor position when writing.
+    ; BIT 2 - Entry Mode Set Flag - Must be 1 for this instruction.
+    lda #%00000111
     jsr lcd_instruction
 
-    ; --- Set Initial Position for Calculator Mode ---
-    ; Set DDRAM address to the 16th character (index 15 = $0F)
-    ; This ensures the first character typed appears at the far right.
-    lda #(SET_DRAM_ADDRESS | LINE_0 | 15)
-    jsr lcd_instruction
-
-    ; Initialize our tracker
-    lda #0
-    sta CHAR_ROW
-    lda #15
-    sta CHAR_COL
-
+    ; Return to caller.
     rts
 
 clear_lcd:
@@ -44,8 +44,8 @@ clear_lcd:
     lda #CLEAR_DISPLAY
     jsr lcd_instruction
 
-    ; Set DDRAM Address.
-    lda #(SET_DRAM_ADDRESS | LINE_0 | 0)
+    ; Set cursor to the 16th character of line 2.
+    lda #(SET_DRAM_ADDRESS | LINE_1 | 16)
     jsr lcd_instruction
 
     ; Return to caller.
